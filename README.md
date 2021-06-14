@@ -1,7 +1,7 @@
 # PycroBurst
 Threaded Python implementation of select MicroBurst scripts.
 
-Original PowerShell versions of Invoke-EnumerateAzureBlobs and Invoke-EnumerateAzureSubDomains can be found here: https://github.com/NetSPI/MicroBurst/blob/master/Misc/
+Original PowerShell versions of `Invoke-EnumerateAzureBlobs` and `Invoke-EnumerateAzureSubDomains` can be found here: https://github.com/NetSPI/MicroBurst/blob/master/Misc/
 
 Parts of the Permutations.txt file borrowed from - https://github.com/brianwarehime/inSp3ctor
 
