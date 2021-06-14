@@ -9,6 +9,7 @@ Parts of the Permutations.txt file borrowed from - https://github.com/brianwareh
 
 # Getting set up
 (Optional) Set up a virtual Python environment with `venv`
+
 Use `pip install -r requirements.txt` to get the required modules.
 
 Use the `-h` flag to get the list of arguments.
