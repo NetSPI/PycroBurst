@@ -12,10 +12,13 @@ import urllib
 import xml.etree.ElementTree as ET
 import os
 import threading
+import asyncio
+from functools import reduce
 
 try:
     import dns.resolver
     import requests
+    import aiohttp
 except ModuleNotFoundError:
     print('Use `pip install -r requirements.txt` to install the required modules to use this script')
     exit()
@@ -28,20 +31,11 @@ def resolveDnsName(name):
     except:
         return ''
 
-def writeToOutput(data, outputFile):
-    try:
-        fileObject = open(outputFile, 'a')
-        fileObject.write(data + '\n')
-        fileObject.close()
-    except:
-        print(f'Error writing to file: {outputFile}')
-
 def checkDnsAndAdd(name):
     if resolveDnsName(name):
         print(f'Found Storage Account - {name}')
         runningList.append(name)
-        if outputFile:
-            writeToOutput(name, outputFile)
+        return name
 
 def chooseFromBing(bingList):
     output = []
@@ -78,28 +72,41 @@ def processDnsChunk(start,stop):
         lookup = lookupList[i]
         checkDnsAndAdd(lookup)
 
-def processContainerChunk(start, stop):
+async def aioProcessContainerChunk(start, stop, session):
+    writeToOutput=[]
     for i in range(start,stop):
         dirGuess = dirList[i]
         uriGuess = f'https://{dirGuess}?restype=container'
         try:
-            guessRequest = requests.get(uriGuess)
-            if guessRequest.status_code == 200:
-                uriList = f'https://{dirGuess}?restype=container&comp=list'
-                fileListRequest = requests.get(uriList)
-                fileListXML = ET.fromstring(fileListRequest.text)
-                if len(fileListXML[0]) > 0:
-                    for blob in fileListXML[0]:
-                        foundURL = blob.find('Name').text
-                        print(f'Public File Available: https://{dirGuess}/{foundURL}')
-                        if outputFile:
-                            writeToOutput(foundURL, outputFile)
-                else:
-                    print(f'Empty Public Container Available: {uriList}')
-                    if outputFile:
-                        writeToOutput(uriList, outputFile)
+            #guessRequest = requests.get(uriGuess)
+            async with session.get(uriGuess) as guessRequest:
+                if guessRequest.status == 200:
+                    uriList = f'https://{dirGuess}?restype=container&comp=list'
+                    #fileListRequest = requests.get(uriList)
+                    async with session.get(uriList) as fileListRequest:
+                        fileListXML = ET.fromstring(await fileListRequest.text())
+                        if len(fileListXML[0]) > 0:
+                            for blob in fileListXML[0]:
+                                foundPath = blob.find('Name').text
+                                print(f'Public File Available: https://{dirGuess}/{foundPath}')
+                                writeToOutput.append(f'https://{dirGuess}/{foundPath}')
+                        else:
+                            print(f'Empty Public Container Available: {uriList}')
+                            writeToOutput.append(f'https://{uriList}')
         except:
             continue
+    return writeToOutput
+
+async def aioMain():
+    calls = []
+    print('Length of dirList: ' + str(len(dirList)))
+    async with aiohttp.ClientSession() as session:
+        for t in range(numThreads):
+            start = int(len(dirList) * t / numThreads)
+            stop = int(len(dirList) * (t+1) / numThreads)
+            print(f'Calling aioProcessContainerChunk with start: {start} and stop: {stop}')
+            calls.append(aioProcessContainerChunk(start, stop, session))
+        return await asyncio.gather(*calls)
 
 if __name__ == '__main__':
     startTime = time.perf_counter()
@@ -219,13 +226,20 @@ if __name__ == '__main__':
             dirList.append(dirGuess)
     
     #Thread the folder check on the storage accounts found
-    containerThreads = []
-    for i in range(numThreads):
-        start = int(len(dirList) * i / numThreads)
-        stop = int(len(dirList) * (i+1) / numThreads)
-        containerThreads.append(threading.Thread(target=processContainerChunk, args=(start,stop)))
-        containerThreads[i].start()
-    for thread in containerThreads:
-        thread.join()
+    if os.name == 'nt': # Windows fix
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    loop = asyncio.get_event_loop()
+    aTemp = loop.run_until_complete(aioMain())
+    writeToOutput = reduce(lambda x,y: x+y, aTemp) # flatten the list of lists into one list
+    
+    try:
+        fileObject = open(outputFile, 'a')
+        for data in writeToOutput:
+            fileObject.write(data + '\n')
+        fileObject.close()
+    except:
+        print(f'Error writing to file: {outputFile}')
+
+
     print()
     print(f'Time taken: {time.perf_counter() - startTime}')
