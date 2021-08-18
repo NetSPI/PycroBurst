@@ -120,7 +120,7 @@ if __name__=='__main__':
     baseGroup.add_argument('-bf', '--basefile', help='Specific file with list of base names to use.')
     parser.add_argument('-o', '--output', help='File where data will be output.')
     parser.add_argument('-p', '--permutations', help='Specific permutations file to use. Default is permutations.txt (included in this repo)')
-    parser.add_argument('-t', '--threads', help='Specify the number of threads to use. Default is 5.', type=int)
+    parser.add_argument('-t', '--threads', help='Specify the number of threads to use. Default is 10.', type=int)
     parser.add_argument('-l', '--library', help='Specify which threading library to use. Default is threading.', choices=['none','threading','asyncio','futures'], default='threading')
     parser.add_argument('-v', '--verbose', help='Verbose output flag. If enabled, the domains will be output as they are found.',
                         action='store_true')
@@ -132,7 +132,7 @@ if __name__=='__main__':
     # default values
     outputFilePath = ''
     permutationsFilePath = os.path.dirname(os.path.realpath(__file__)) + '\\permutations.txt'
-    numThreads = 5
+    numThreads = 10
     verbose = False
     library = args.library
 
