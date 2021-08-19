@@ -132,8 +132,8 @@ if __name__ == '__main__':
                         help='The Bing API Key to use for base name searches.')
 
     parser.add_argument('-t', '--threads',
-                        help='Specify the number of threads to use. Default is 5.',
-                        type=int, default=5)
+                        help='Specify the number of threads to use. Default is 10.',
+                        type=int, default=10)
 
     args = parser.parse_args()
 
